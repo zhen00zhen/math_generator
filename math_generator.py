@@ -1,4 +1,3 @@
-import argparse
 import random
 import math
 import os
@@ -627,11 +626,13 @@ class MathProblemGenerator:
         print(f"检查完成！结果保存在 Grade.txt")
         print(f"正确: {len(correct)}题, 错误: {len(wrong)}题")
 
-def main():
+def create_parser():
+    """延迟创建argparse解析器"""
+    import argparse
     parser = argparse.ArgumentParser(
         description='小学四则运算题目生成器',
         formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''
+        epilog='''\
 示例:
   %(prog)s -n 10 -r 10     生成10道10以内的题目
   %(prog)s -e exercises.txt -a answers.txt  检查答案
@@ -644,32 +645,73 @@ def main():
     parser.add_argument('-e', type=str, help='题目文件')
     parser.add_argument('-a', type=str, help='答案文件')
     
-    args = parser.parse_args()
+    return parser
+
+def simple_arg_parse():
+    """简化的参数解析作为备选方案"""
+    import sys
+    args = {}
+    argv = sys.argv[1:]
+    
+    i = 0
+    while i < len(argv):
+        arg = argv[i]
+        if arg in ['-n', '-r', '-e', '-a'] and i + 1 < len(argv):
+            args[arg[1:]] = argv[i + 1]
+            i += 2
+        else:
+            i += 1
+    
+    return args
+
+def main():
+    # 使用简化的参数解析作为首选，复杂情况回退到argparse
+    simple_args = simple_arg_parse()
+    
+    # 如果参数简单且完整，直接使用简化解析
+    if set(simple_args.keys()) in [{'n', 'r'}, {'e', 'a'}]:
+        args = type('Args', (), simple_args)()
+    else:
+        # 回退到完整的argparse
+        parser = create_parser()
+        args = parser.parse_args()
+    
     generator = MathProblemGenerator()
     
-    if args.n and args.r:
-        if args.n <= 0:
+    if hasattr(args, 'n') and hasattr(args, 'r'):
+        n_val = int(args.n) if args.n else 0
+        r_val = int(args.r) if args.r else 0
+        
+        if n_val <= 0:
             print("错误: -n 必须大于0")
             return
-        if args.r <= 1:
+        if r_val <= 1:
             print("错误: -r 必须大于1")
             return
-        generator.generate_mode(args.n, args.r)
-    elif args.e and args.a:
-        if not os.path.exists(args.e):
-            print(f"错误: 题目文件 '{args.e}' 不存在")
+        generator.generate_mode(n_val, r_val)
+    elif hasattr(args, 'e') and hasattr(args, 'a'):
+        e_file = args.e
+        a_file = args.a
+        
+        if not os.path.exists(e_file):
+            print(f"错误: 题目文件 '{e_file}' 不存在")
             return
-        if not os.path.exists(args.a):
-            print(f"错误: 答案文件 '{args.a}' 不存在")
+        if not os.path.exists(a_file):
+            print(f"错误: 答案文件 '{a_file}' 不存在")
             return
-        generator.check_mode(args.e, args.a)
+        generator.check_mode(e_file, a_file)
     else:
-        if (args.n and not args.r) or (args.r and not args.n):
-            print("错误: -n 和 -r 必须同时使用")
-        elif (args.e and not args.a) or (args.a and not args.e):
-            print("错误: -e 和 -a 必须同时使用")
-        else:
-            parser.print_help()
+        # 显示帮助信息
+        print("小学四则运算题目生成器")
+        print("用法:")
+        print("  生成题目: python math_generator.py -n 10 -r 10")
+        print("  检查答案: python math_generator.py -e exercises.txt -a answers.txt")
+        print()
+        print("参数说明:")
+        print("  -n  生成题目的数量")
+        print("  -r  数值范围")
+        print("  -e  题目文件")
+        print("  -a  答案文件")
 
 if __name__ == '__main__':
     main()
