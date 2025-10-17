@@ -2,7 +2,7 @@ import unittest
 import tempfile
 import os
 import time
-from math_generator import Fraction, ExpressionParser, FileHandler, AnswerChecker, MathProblemGenerator
+from math_generator import Fraction, ExpressionParser, ProblemGenerator, FileHandler, AnswerChecker, MathProblemGenerator
 
 class TestFraction(unittest.TestCase):
     """优化的分数测试"""
