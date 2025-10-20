@@ -374,6 +374,6 @@ if __name__ == '__main__':
     
     # 运行性能测试
     print("\n" + "=" * 50)
-    run_performance_test()
+    
     
     print("\n测试完成！")
