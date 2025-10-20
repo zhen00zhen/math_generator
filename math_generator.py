@@ -1,56 +1,48 @@
 import random
 import math
 import os
-from functools import total_ordering
 import sys
-from typing import List, Tuple, Optional, Set, Union
+from functools import total_ordering
+from typing import List, Tuple, Optional, Set
 
 @total_ordering
 class Fraction:
-    """优化的分数类 - 使用缓存和更高效的算法"""
+    """优化的分数类"""
     
     __slots__ = ('numerator', 'denominator', '_hash')
-    
-    # 缓存常用分数以减少对象创建
     _common_fractions = {}
     
     def __new__(cls, numerator, denominator=1):
-        # 尝试从缓存获取
         if denominator == 1 and numerator in cls._common_fractions:
             return cls._common_fractions[numerator]
-        
-        instance = super().__new__(cls)
-        return instance
+        return super().__new__(cls)
     
     def __init__(self, numerator, denominator=1):
         if denominator == 0:
             raise ValueError("分母不能为零")
-        
         self.numerator = numerator
         self.denominator = denominator
         self._hash = None
         self._simplify()
     
     def _simplify(self):
-        """使用更高效的约分方法"""
+        """简化分数"""
         if self.numerator == 0:
             self.denominator = 1
             return
             
-        # 使用预计算的gcd
         gcd_val = math.gcd(abs(self.numerator), self.denominator)
         if gcd_val > 1:
             self.numerator //= gcd_val
             self.denominator //= gcd_val
         
-        # 确保分母为正
         if self.denominator < 0:
             self.numerator = -self.numerator
             self.denominator = -self.denominator
     
     @classmethod
     def from_string(cls, s):
-        """优化的字符串解析"""
+        """从字符串解析分数"""
         s = str(s).strip()
         
         if "'" in s:
@@ -65,7 +57,7 @@ class Fraction:
             return cls(int(s))
     
     def to_string(self):
-        """优化的字符串转换 - 使用预计算"""
+        """转换为字符串表示"""
         if self.numerator == 0:
             return "0"
         if self.denominator == 1:
@@ -79,20 +71,17 @@ class Fraction:
         else:
             return f"{self.numerator}/{self.denominator}"
     
-    # 属性检查方法
     def is_proper_fraction(self):
         return abs(self.numerator) < self.denominator
     
     def is_non_negative(self):
         return self.numerator >= 0
     
-    # 运算方法
     def _ensure_fraction(self, value):
         return value if isinstance(value, Fraction) else Fraction(value)
     
     def __add__(self, other):
         other = self._ensure_fraction(other)
-        # 使用预计算的公分母
         new_denom = self.denominator * other.denominator
         new_num = self.numerator * other.denominator + other.numerator * self.denominator
         return Fraction(new_num, new_denom)
@@ -115,7 +104,6 @@ class Fraction:
             raise ValueError("除数不能为零")
         return Fraction(self.numerator * other.denominator, self.denominator * other.numerator)
     
-    # 比较方法
     def __eq__(self, other):
         if other is None:
             return False
@@ -142,11 +130,9 @@ for i in range(-20, 21):
     Fraction._common_fractions[i] = Fraction(i)
 
 class ExpressionParser:
-    """优化的表达式解析器 - 使用状态机和预编译"""
+    """表达式解析器"""
     
     __slots__ = ('tokens', 'current_token', 'index')
-    
-    # 预定义运算符优先级
     _OPERATOR_PRIORITY = {'+': 1, '-': 1, '×': 2, '÷': 2}
     
     def __init__(self):
@@ -155,24 +141,22 @@ class ExpressionParser:
         self.index = 0
     
     def parse(self, expression_str):
-        """解析表达式字符串 - 使用更快的字符串处理"""
-        # 快速预处理
+        """解析表达式字符串"""
         expr_str = expression_str.strip()
         if '. ' in expr_str:
             expr_str = expr_str.split('. ', 1)[1]
         expr_str = expr_str.rstrip(' =')
         
-        self.tokens = self._tokenize_fast(expr_str)
+        self.tokens = self.tokenize(expr_str)
         if not self.tokens:
             raise ValueError("表达式为空")
             
         self.index = 0
         self.current_token = self.tokens[0]
-        
         return self._parse_expression()
     
-    def _tokenize_fast(self, expr_str):
-        """使用生成器的高效分词器"""
+    def tokenize(self, expr_str):
+        """分词器 - 公共方法供测试使用"""
         tokens = []
         i, n = 0, len(expr_str)
         
@@ -190,25 +174,21 @@ class ExpressionParser:
                 tokens.append(('operator', char))
                 i += 1
             else:
-                # 快速数字解析
                 start = i
                 while i < n and (expr_str[i].isdigit() or expr_str[i] in "'/"):
                     i += 1
                 token_value = expr_str[start:i]
                 
-                if self._is_number_fast(token_value):
+                if self._is_number(token_value):
                     tokens.append(('number', token_value))
                 else:
                     raise ValueError(f"无效的数字格式: {token_value}")
         
         return tokens
     
-    def tokenize(self, expr_str):
-        return self._tokenize_fast(expr_str)
-    
     @staticmethod
-    def _is_number_fast(s):
-        """优化的数字检查"""
+    def _is_number(s):
+        """检查是否为有效数字"""
         if not s:
             return False
             
@@ -230,7 +210,7 @@ class ExpressionParser:
         return False
     
     def _advance(self):
-        """快速移动到下一个token"""
+        """移动到下一个token"""
         self.index += 1
         if self.index < len(self.tokens):
             self.current_token = self.tokens[self.index]
@@ -288,7 +268,7 @@ class ExpressionParser:
             raise ValueError(f"意外的token: {self.current_token}")
     
     def evaluate_expression_tree(self, node):
-        """使用缓存的表达式树求值"""
+        """求值表达式树"""
         if isinstance(node, Fraction):
             return node
         
@@ -296,19 +276,17 @@ class ExpressionParser:
         left_val = self.evaluate_expression_tree(left)
         right_val = self.evaluate_expression_tree(right)
         
-        if operator == '+':
-            return left_val + right_val
-        elif operator == '-':
-            return left_val - right_val
-        elif operator == '×':
-            return left_val * right_val
-        elif operator == '÷':
-            if right_val.numerator == 0:
-                raise ValueError("除数不能为零")
-            return left_val / right_val
+        operations = {
+            '+': lambda x, y: x + y,
+            '-': lambda x, y: x - y,
+            '×': lambda x, y: x * y,
+            '÷': lambda x, y: x / y
+        }
+        
+        return operations[operator](left_val, right_val)
     
     def evaluate_with_validation(self, node):
-        """优化的验证求值"""
+        """验证并求值表达式树"""
         if isinstance(node, Fraction):
             return node
         
@@ -316,14 +294,10 @@ class ExpressionParser:
         left_val = self.evaluate_with_validation(left)
         right_val = self.evaluate_with_validation(right)
         
-        if operator == '+':
-            return left_val + right_val
-        elif operator == '-':
+        if operator == '-':
             if left_val < right_val:
                 raise ValueError("减法运算中左值必须大于等于右值")
             return left_val - right_val
-        elif operator == '×':
-            return left_val * right_val
         elif operator == '÷':
             if right_val.numerator == 0:
                 raise ValueError("除数不能为零")
@@ -333,12 +307,14 @@ class ExpressionParser:
             if not result.is_proper_fraction():
                 raise ValueError("除法结果必须为真分数")
             return result
+        else:
+            return self.evaluate_expression_tree(node)
 
 class ProblemGenerator:
-    """高度优化的题目生成器"""
+    """题目生成器"""
     
     __slots__ = ('range_limit', 'operators', 'generated_expressions', 'parser', 
-                 'operator_weights', 'number_cache', 'max_attempts_per_problem')
+                 'operator_weights', 'max_attempts_per_problem')
     
     def __init__(self, range_limit):
         self.range_limit = range_limit
@@ -346,11 +322,10 @@ class ProblemGenerator:
         self.operator_weights = [0.35, 0.35, 0.25, 0.05]
         self.generated_expressions: Set[str] = set()
         self.parser = ExpressionParser()
-        self.number_cache = {}
         self.max_attempts_per_problem = 50
     
     def generate_number(self):
-        """使用缓存的数字生成"""
+        """生成随机数"""
         if random.random() < 0.4:
             denominator = random.randint(2, self.range_limit - 1)
             numerator = random.randint(1, denominator - 1)
@@ -359,7 +334,7 @@ class ProblemGenerator:
             return Fraction(random.randint(0, self.range_limit - 1))
     
     def _compare_expression_values(self, expr1, expr2):
-        """快速表达式值比较"""
+        """比较两个表达式的值"""
         try:
             val1 = self.parser.evaluate_expression_tree(expr1)
             val2 = self.parser.evaluate_expression_tree(expr2)
@@ -368,11 +343,10 @@ class ProblemGenerator:
             return 0
     
     def generate_valid_expression_tree(self, max_operators=3, current_operators=0):
-        """优化的表达式树生成"""
+        """生成有效的表达式树"""
         if current_operators >= max_operators:
             return self.generate_number()
         
-        # 动态调整生成概率
         if current_operators > 0 and random.random() < (0.4 + current_operators * 0.3):
             return self.generate_number()
         
@@ -380,23 +354,20 @@ class ProblemGenerator:
         
         for _ in range(self.max_attempts_per_problem):
             try:
-                # 优化递归深度控制
                 left_operators = random.randint(0, max_operators - current_operators - 1)
                 right_operators = max_operators - current_operators - 1 - left_operators
                 
                 left = self.generate_valid_expression_tree(max_operators, current_operators + left_operators + 1)
                 right = self.generate_valid_expression_tree(max_operators, current_operators + right_operators + 1)
                 
-                # 快速验证和调整
+                # 操作符特定验证
                 if operator == '-':
                     if self._compare_expression_values(left, right) < 0:
                         left, right = right, left
-                
                 elif operator == '÷':
                     if self._compare_expression_values(left, right) >= 0:
                         left, right = right, left
                     
-                    # 快速预检查
                     right_val = self.parser.evaluate_expression_tree(right)
                     left_val = self.parser.evaluate_expression_tree(left)
                     if right_val.numerator == 0 or left_val.numerator == 0:
@@ -420,12 +391,11 @@ class ProblemGenerator:
         return self.generate_number()
     
     def tree_to_string(self, node, parent_priority=0):
-        """优化的树到字符串转换"""
+        """将表达式树转换为字符串"""
         if isinstance(node, Fraction):
             return str(node)
         
         operator, left, right = node
-        
         priority = {'+': 1, '-': 1, '×': 2, '÷': 2}
         
         left_str = self.tree_to_string(left, priority[operator])
@@ -437,17 +407,18 @@ class ProblemGenerator:
         return f"({expr_str})" if current_priority < parent_priority else expr_str
     
     def _count_operators(self, node):
-        """快速运算符计数"""
+        """计算运算符数量"""
         if isinstance(node, Fraction):
             return 0
         operator, left, right = node
         return 1 + self._count_operators(left) + self._count_operators(right)
     
     def count_operators(self, node):
+        """计算运算符数量 - 公共方法供测试使用"""
         return self._count_operators(node)
     
     def _normalize_expression(self, node):
-        """优化的表达式规范化"""
+        """规范化表达式"""
         if isinstance(node, Fraction):
             return str(node)
         
@@ -474,12 +445,12 @@ class ProblemGenerator:
             return [self._normalize_expression(node)]
     
     def generate_unique_expression(self, max_attempts=100) -> Tuple[Optional[str], Optional[Fraction]]:
-        """优化的唯一表达式生成"""
-        for attempt in range(max_attempts):
+        """生成唯一表达式"""
+        for _ in range(max_attempts):
             try:
                 expr_tree = self.generate_valid_expression_tree()
             
-                op_count = self._count_operators(expr_tree)
+                op_count = self.count_operators(expr_tree)
                 if op_count > 3 or op_count == 0:
                     continue
             
@@ -489,7 +460,6 @@ class ProblemGenerator:
                 if norm_str not in self.generated_expressions:
                     self.generated_expressions.add(norm_str)
                     expr_str = self.tree_to_string(expr_tree)
-                    # 修复：在返回时添加等号
                     return f"{expr_str} =", value
                     
             except (ValueError, ZeroDivisionError):
@@ -498,15 +468,13 @@ class ProblemGenerator:
         return None, None
 
     def generate_problems(self, count) -> Tuple[List[str], List[str]]:
-        """批量生成优化"""
+        """生成题目和答案"""
         problems, answers = [], []
         generated_count = 0
-        max_total_attempts = count * 100
-    
-        while generated_count < count and len(problems) < max_total_attempts:
+        
+        while generated_count < count and len(problems) < count * 100:
             expr, answer = self.generate_unique_expression()
             if expr is not None:
-                # 修复：不再重复添加等号
                 problems.append(expr)
                 answers.append(answer.to_string())
                 generated_count += 1
@@ -517,43 +485,40 @@ class ProblemGenerator:
         return problems, answers
 
 class FileHandler:
-    """优化的文件处理"""
-    
-    @staticmethod
-    def _get_encoding():
-        return 'utf-8'
+    """文件处理工具类"""
     
     @staticmethod
     def save_problems(problems, filename='Exercises.txt'):
-        """批量写入优化"""
+        """保存题目到文件"""
         try:
-            with open(filename, 'w', encoding=FileHandler._get_encoding()) as f:
-                # 使用生成器表达式减少内存使用
-                lines = (f"{i}. {problem}\n" for i, problem in enumerate(problems, 1))
-                f.writelines(lines)
+            with open(filename, 'w', encoding='utf-8') as f:
+                for i, problem in enumerate(problems, 1):
+                    f.write(f"{i}. {problem}\n")
         except Exception as e:
             print(f"保存题目文件时出错: {e}")
     
     @staticmethod
     def save_answers(answers, filename='Answers.txt'):
+        """保存答案到文件"""
         try:
-            with open(filename, 'w', encoding=FileHandler._get_encoding()) as f:
-                lines = (f"{i}. {answer}\n" for i, answer in enumerate(answers, 1))
-                f.writelines(lines)
+            with open(filename, 'w', encoding='utf-8') as f:
+                for i, answer in enumerate(answers, 1):
+                    f.write(f"{i}. {answer}\n")
         except Exception as e:
             print(f"保存答案文件时出错: {e}")
     
     @staticmethod
     def load_file(filename):
+        """读取文件"""
         try:
-            with open(filename, 'r', encoding=FileHandler._get_encoding()) as f:
+            with open(filename, 'r', encoding='utf-8') as f:
                 return [line.strip() for line in f]
         except (UnicodeDecodeError, FileNotFoundError) as e:
             print(f"读取文件 {filename} 时出错: {e}")
             return []
 
 class AnswerChecker:
-    """优化的答案检查器"""
+    """答案检查器"""
     
     __slots__ = ('parser',)
     
@@ -561,6 +526,7 @@ class AnswerChecker:
         self.parser = ExpressionParser()
     
     def check_answers(self, exercise_file, answer_file):
+        """检查答案"""
         exercises = FileHandler.load_file(exercise_file)
         submitted_answers = FileHandler.load_file(answer_file)
         
@@ -588,7 +554,7 @@ class AnswerChecker:
         return correct, wrong
 
 class MathProblemGenerator:
-    """优化的主程序"""
+    """数学题目生成器主类"""
     
     __slots__ = ('answer_checker',)
     
@@ -596,6 +562,7 @@ class MathProblemGenerator:
         self.answer_checker = AnswerChecker()
     
     def generate_mode(self, count, range_limit):
+        """生成模式"""
         print(f"正在生成 {count} 道题目，数值范围: {range_limit}")
         
         problem_generator = ProblemGenerator(range_limit)
@@ -612,6 +579,7 @@ class MathProblemGenerator:
             print(f"{i+1}. {problem} {answer}")
     
     def check_mode(self, exercise_file, answer_file):
+        """检查模式"""
         print(f"正在检查答案...")
         
         correct, wrong = self.answer_checker.check_answers(exercise_file, answer_file)
@@ -626,29 +594,8 @@ class MathProblemGenerator:
         print(f"检查完成！结果保存在 Grade.txt")
         print(f"正确: {len(correct)}题, 错误: {len(wrong)}题")
 
-def create_parser():
-    """延迟创建argparse解析器"""
-    import argparse
-    parser = argparse.ArgumentParser(
-        description='小学四则运算题目生成器',
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-        epilog='''\
-示例:
-  %(prog)s -n 10 -r 10     生成10道10以内的题目
-  %(prog)s -e exercises.txt -a answers.txt  检查答案
-        '''
-    )
-    
-    parser.add_argument('-n', type=int, help='生成题目的数量')
-    parser.add_argument('-r', type=int, help='数值范围')
-    
-    parser.add_argument('-e', type=str, help='题目文件')
-    parser.add_argument('-a', type=str, help='答案文件')
-    
-    return parser
-
 def simple_arg_parse():
-    """简化的参数解析作为备选方案"""
+    """简化参数解析"""
     import sys
     args = {}
     argv = sys.argv[1:]
@@ -665,7 +612,15 @@ def simple_arg_parse():
     return args
 
 def main():
-    # 使用简化的参数解析作为首选，复杂情况回退到argparse
+    """主函数"""
+    # 性能分析模式检测
+    if len(sys.argv) == 1:
+        print("性能分析模式：生成100道10以内的题目")
+        generator = MathProblemGenerator()
+        generator.generate_mode(100, 10)
+        return
+    
+    # 正常参数解析
     simple_args = simple_arg_parse()
     
     # 如果参数简单且完整，直接使用简化解析
@@ -673,7 +628,12 @@ def main():
         args = type('Args', (), simple_args)()
     else:
         # 回退到完整的argparse
-        parser = create_parser()
+        import argparse
+        parser = argparse.ArgumentParser(description='小学四则运算题目生成器')
+        parser.add_argument('-n', type=int, help='生成题目的数量')
+        parser.add_argument('-r', type=int, help='数值范围')
+        parser.add_argument('-e', type=str, help='题目文件')
+        parser.add_argument('-a', type=str, help='答案文件')
         args = parser.parse_args()
     
     generator = MathProblemGenerator()
@@ -701,17 +661,9 @@ def main():
             return
         generator.check_mode(e_file, a_file)
     else:
-        # 显示帮助信息
-        print("小学四则运算题目生成器")
         print("用法:")
         print("  生成题目: python math_generator.py -n 10 -r 10")
         print("  检查答案: python math_generator.py -e exercises.txt -a answers.txt")
-        print()
-        print("参数说明:")
-        print("  -n  生成题目的数量")
-        print("  -r  数值范围")
-        print("  -e  题目文件")
-        print("  -a  答案文件")
 
 if __name__ == '__main__':
     main()
